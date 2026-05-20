@@ -1,8 +1,6 @@
-# 🚀 Lab : Déploiement d’une application Laravel sur Ubuntu
+# 🚀 Déploiement d’une application Laravel sur Ubuntu
 
----
-
-## 🧰 1. Mise à jour du système
+## 📦 1. Mise à jour du système
 
 ```bash
 sudo apt update
@@ -26,7 +24,7 @@ curl -sS https://getcomposer.org/installer | php
 sudo mv composer.phar /usr/local/bin/composer
 ```
 
-Vérification :
+### Vérification
 
 ```bash
 composer -v
@@ -58,42 +56,23 @@ cd hello_world
 
 ---
 
-## ▶️ 7. Lancer le serveur Laravel (test)
+## ▶️ 7. Test du serveur Laravel
 
 ```bash
 php artisan serve
 ```
 
-Accès :
+### Accès
 
-```
+```text
 http://127.0.0.1:8000
 ```
 
 ---
 
-## ⚙️ 8. Configuration du fichier .env
+# 🌐 Déploiement avec Apache
 
-```env
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=hello_world
-DB_USERNAME=root
-DB_PASSWORD=
-```
-
----
-
-## 🌐 9. Installation Apache
-
-```bash
-sudo apt install apache2
-```
-
----
-
-## 📁 10. Déplacement du projet
+## 📁 8. Déplacement du projet
 
 ```bash
 sudo mv ~/hello_world /var/www/
@@ -101,7 +80,7 @@ sudo mv ~/hello_world /var/www/
 
 ---
 
-## 🔐 11. Permissions
+## 🔐 9. Permissions
 
 ```bash
 sudo chown -R www-data:www-data /var/www/hello_world
@@ -112,144 +91,210 @@ sudo chmod -R 775 /var/www/hello_world/bootstrap/cache
 
 ---
 
-## ⚙️ 12. Configuration Apache (VirtualHost)
+## ⚙️ 10. Configuration Apache
+
+### Ouvrir le fichier VirtualHost
 
 ```bash
 sudo nano /etc/apache2/sites-available/000-default.conf
 ```
 
-Contenu :
+### Contenu
 
 ```apache
 <VirtualHost *:80>
+    ServerAdmin webmaster@localhost
+
     DocumentRoot /var/www/hello_world/public
 
     <Directory /var/www/hello_world/public>
         AllowOverride All
         Require all granted
     </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/error.log
+    CustomLog ${APACHE_LOG_DIR}/access.log combined
 </VirtualHost>
 ```
 
 ---
 
-## 🔧 13. Activer le module rewrite
+## 🔧 11. Activer les modules Apache
+
+### Rewrite module
 
 ```bash
 sudo a2enmod rewrite
 ```
 
+### PHP module
+
+```bash
+sudo apt install libapache2-mod-php
+sudo a2enmod php8.5
+```
+
 ---
 
-## 🔄 14. Redémarrer Apache
+## 🔄 12. Redémarrer Apache
 
 ```bash
 sudo systemctl restart apache2
 ```
 
+### Vérification
+
+```bash
+sudo systemctl status apache2
+```
+
 ---
 
-## 🌍 15. Accès au projet
+# 🗄️ Configuration MySQL
 
-Depuis Ubuntu :
+## 13. Créer la base de données
 
+```bash
+sudo mysql
 ```
+
+### Dans MySQL
+
+```sql
+CREATE DATABASE hello_world;
+EXIT;
+```
+
+---
+
+## ⚙️ 14. Configuration du fichier .env
+
+```bash
+sudo nano .env
+```
+
+### Configuration MySQL
+
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=hello_world
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+### Sessions et cache
+
+```env
+SESSION_DRIVER=file
+CACHE_STORE=file
+```
+
+---
+
+## 🧹 15. Nettoyage du cache Laravel
+
+```bash
+rm -rf bootstrap/cache/*.php
+php artisan config:clear
+```
+
+---
+
+# 🛠️ Résolution des erreurs
+
+## ❌ Erreur SQLite readonly
+
+### Cause
+
+Laravel utilisait SQLite avec des permissions insuffisantes.
+
+### Solution
+
+```bash
+sudo chown -R www-data:www-data storage bootstrap/cache
+sudo chmod -R 775 storage bootstrap/cache
+
+sudo mkdir -p storage/framework/{sessions,views,cache}
+sudo chmod -R 775 storage/framework
+
+sudo rm -rf storage/framework/views/*
+```
+
+---
+
+## ❌ Apache ne démarre pas
+
+### Cause
+
+Le port 80 était déjà utilisé par Nginx.
+
+### Solution
+
+```bash
+sudo systemctl stop nginx
+sudo systemctl restart apache2
+```
+
+---
+
+## ❌ Apache affiche le code PHP
+
+### Cause
+
+Le module PHP Apache n’était pas installé.
+
+### Solution
+
+```bash
+sudo apt install libapache2-mod-php
+sudo a2enmod php8.5
+sudo systemctl restart apache2
+```
+
+---
+
+# 🌍 Accès à l’application
+
+## Depuis Ubuntu
+
+```text
 http://localhost
 ```
 
-Depuis Windows (machine hôte) :
-
-```
-http://192.168.xxx.xxx
-```
-
 ---
 
-## 🧪 16. Vérifier l’adresse IP
+## Depuis Windows (machine hôte)
+
+### Vérifier l’adresse IP
 
 ```bash
 ip a
 ```
 
----
+### Exemple IP
 
-## 🎨 17. Création d’une page Hello World
-
-Dans `routes/web.php` :
-
-```php
-Route::get('/', function () {
-    return view('welcome');
-});
+```text
+192.168.32.128
 ```
 
-Modifier le fichier :
+### Accès navigateur
 
-```
-resources/views/welcome.blade.php
-```
-
----
-
-# ⚠️ Problèmes rencontrés et solutions
-
----
-
-## ❌ Erreur : could not find driver
-
-**Cause :** extension SQLite manquante
-
-**Solution :**
-
-```bash
-sudo apt install php-sqlite3
-```
-
----
-
-## ❌ Erreur : no such table: sessions
-
-**Cause :** base de données non configurée ou session mal configurée
-
-**Solution :**
-
-* Vérifier `.env`
-* Utiliser `SESSION_DRIVER=file`
-
----
-
-## ❌ Apache affiche la page par défaut
-
-**Cause :** Apache pointe vers `/var/www/html`
-
-**Solution :**
-
-Modifier :
-
-```bash
-sudo nano /etc/apache2/sites-available/000-default.conf
-```
-
-Changer :
-
-```apache
-DocumentRoot /var/www/hello_world/public
-```
-
-Puis :
-
-```bash
-sudo systemctl restart apache2
+```text
+http://192.168.32.128
 ```
 
 ---
 
 # 🎉 Résultat final
 
-✔ Application Laravel fonctionnelle
-✔ Déployée sur Apache
-✔ Accessible via navigateur
-✔ Communication entre VM et machine hôte réussie
+✅ Application Laravel fonctionnelle  
+✅ Déployée sur Apache  
+✅ Accessible via navigateur  
+✅ Communication VM ↔ Host réussie  
+✅ MySQL configuré correctement  
+✅ Permissions Laravel corrigées
 
 ---
 
@@ -257,11 +302,12 @@ sudo systemctl restart apache2
 
 Ce lab m’a permis de :
 
-* Installer et configurer Laravel sur Ubuntu
-* Comprendre le rôle du dossier `/public`
-* Configurer Apache pour servir une application web
-* Résoudre des erreurs liées aux extensions PHP et à la base de données
-* Déployer une application accessible via réseau local
+- Installer Laravel sur Ubuntu
+- Configurer Apache et PHP
+- Connecter Laravel à MySQL
+- Résoudre les erreurs SQLite
+- Corriger les permissions Laravel
+- Déployer une application web accessible sur le réseau local
 
 ---
 
